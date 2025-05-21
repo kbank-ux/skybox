@@ -389,6 +389,19 @@
 				}
 			}
 		}
+
+		#in_gameInfo {
+			width: 100%;
+			height: 25px;
+			background: #999;
+			border: none;
+			border-radius: 5px;
+			color: white;
+			padding: 0 10px;
+		}
+		#in_gameInfo::placeholder {
+			color: #ddd;
+		}
 	</style>
 </head>
 <body>
@@ -859,7 +872,7 @@
 				<i class="icon map"></i>
 				<span data-trans>경기 정보</span>
 			</label>
-			<input type="text" id="in_gameInfo" value="" placeholder="경기 일시와 구단명 등을 입력해주세요. 위쪽에 표시됩니다" style="width: 100%; height: 25px; background: #999; border: none; border-radius: 5px; color: white; padding: 0 10px;" />
+			<input type="text" id="in_gameInfo" value="" placeholder="경기 일시와 구단명 등을 입력해주세요. 위쪽에 표시됩니다" />
 		</div>
 		<!-- <div class="row">
 			<label>
