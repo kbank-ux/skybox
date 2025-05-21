@@ -217,6 +217,9 @@
 				&.preplay {
 					mask-image: url('assets/images/check.svg');
 				}
+				&.share {
+					mask-image: url('assets/images/share.svg');
+				}
 			}
 
 			div.left {
@@ -663,6 +666,25 @@
 		}
 		console.log('initializing start');
 
+		// URL에서 데이터 복원
+		const urlParams = new URLSearchParams(window.location.search);
+		const encodedData = urlParams.get('data');
+		if (encodedData) {
+			try {
+				const decodedData = atob(decodeURIComponent(encodedData));
+				const data = JSON.parse(decodedData);
+				if (data.names) {
+					document.querySelector('#in_names').value = data.names;
+				}
+				if (data.gameInfo) {
+					document.querySelector('#in_gameInfo').value = data.gameInfo;
+					document.querySelector('#gameInfo').textContent = data.gameInfo;
+				}
+			} catch (e) {
+				console.error('Failed to decode URL data:', e);
+			}
+		}
+
 		const savedNames = localStorage.getItem('mbr_names');
 		if (savedNames) {
 			document.querySelector('#in_names').value = savedNames;
@@ -823,6 +845,28 @@
 			}
 		};
 		//setTimeout(checkDonateButtonLoaded, 100);
+
+		// URL 공유 버튼 이벤트 리스너 추가
+		document.querySelector('#btnShare').addEventListener('click', () => {
+			const names = document.querySelector('#in_names').value;
+			const gameInfo = document.querySelector('#in_gameInfo').value;
+			
+			const data = {
+				names: names,
+				gameInfo: gameInfo
+			};
+			
+			const encodedData = encodeURIComponent(btoa(JSON.stringify(data)));
+			const shareUrl = `${window.location.origin}${window.location.pathname}?data=${encodedData}`;
+			
+			// 클립보드에 복사
+			navigator.clipboard.writeText(shareUrl).then(() => {
+				alert('URL이 클립보드에 복사되었습니다.');
+			}).catch(err => {
+				console.error('Failed to copy URL:', err);
+				alert('URL 복사에 실패했습니다.');
+			});
+		});
 	}
 
 	document.querySelector('#in_gameInfo').addEventListener('input', (e) => {
@@ -886,6 +930,10 @@
 		<h3 data-trans>Enter names below</h3>
 		<textarea id="in_names" placeholder="Input names separated by commas or line feed here" data-trans="placeholder">홍길동*3, 아무개*2, 김철수</textarea>
 		<div class="actions">
+			<button id="btnShare" style="float: left;">
+				<i class="icon share"></i>
+				<span data-trans>&nbsp;&nbsp;URL 공유</span>
+			</button>
 			<button id="btnPreStart" style="display: none;">
 				<i class="icon preplay"></i>
 				<span data-trans>선수 입장</span>
