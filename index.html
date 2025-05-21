@@ -805,6 +805,11 @@
 		};
 		//setTimeout(checkDonateButtonLoaded, 100);
 	}
+
+	document.querySelector('#in_gameInfo').addEventListener('input', (e) => {
+		document.querySelector('#gameInfo').textContent = e.target.value;
+	});
+	document.querySelector('#gameInfo').textContent = document.querySelector('#in_gameInfo').value;
 </script>
 <h1 id="pageTitle">KT 수원야구장 스카이박스 추첨</h1>
 <div id="settings" class="settings">
@@ -843,6 +848,13 @@
 				<input type="number" id="in_winningRank" value="1" min="1" />
 			</div>
 		</div>
+		<div class="row">
+			<label>
+				<i class="icon map"></i>
+				<span data-trans>경기 정보</span>
+			</label>
+			<input type="text" id="in_gameInfo" value="KT수원야구장 스카이박스 추첨" style="width: 100%; height: 25px; background: #999; border: none; border-radius: 5px; color: white; padding: 0 10px;" />
+		</div>
 		<!-- <div class="row">
 			<label>
 				<i class="icon bomb"></i>
@@ -876,5 +888,6 @@
 	<button id="btnShake" data-trans>Shake!</button>
 </div> -->
 <div class="copyright"></div> 원작자 : lazygyu</a></div>
+<div id="gameInfo" style="position: fixed; top: 80px; left: 50%; transform: translateX(-50%); color: white; font-size: 16px; text-align: center; z-index: 9999;"></div>
 </body>
 </html>
