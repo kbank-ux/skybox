@@ -23,7 +23,7 @@
   "scripts": {
     "lint": "eslint --fix src/**/*.ts",
     "dev": "yarn build && parcel index.html",
-    "build": "parcel build index.html --public-url /skybox/",
+    "build": "parcel build index.html --public-url ./",
     "deploy": "yarn build && gh-pages -d dist"
   },
   "dependencies": {
