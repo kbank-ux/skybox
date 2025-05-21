@@ -17,20 +17,35 @@ jobs:
   build:
     # The type of runner that the job will run on
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      # Runs a single command using the runners shell
-      - name: build
+      # Sets up Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Installs dependencies
+      - name: Install dependencies
+        run: yarn install
+
+      # Builds the project
+      - name: Build
         run: |
-          yarn
-          npx update-browserslist-db@latest
           yarn build
-      - name: deploy
+          ls -la dist/
+
+      # Deploys the project
+      - name: Deploy
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
+          publish_branch: gh-pages
+          destination_dir: skybox
