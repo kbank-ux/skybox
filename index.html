@@ -410,9 +410,12 @@
 <script type="module" src="./src/index.ts"></script>
 <script type="text/javascript">
 	
-	let MAX_SAMPLES = 333; // 기본값
+	// 전역 변수 선언
+	let MAX_SAMPLES = 333;
 	let expandedNames = []; 
 	let preSelectedNames = [];
+	let ready = false;
+	let winnerType = 'first';
 
 	window.startBackgroundMusic = function() {
 		var audio = document.getElementById('backgroundMusic');
@@ -562,8 +565,6 @@
 		}, 50); // 0.05초 간격
 	}
 
-
-
 	function fadeOutOverlay(overlay) {
 		setTimeout(() => {
 			overlay.style.transition = 'opacity 1s';
@@ -576,8 +577,6 @@
 			}, 1000);
 		}, 1000);
 	}
-
-
 
 	window.dataLayer = window.dataLayer || [];
 	// function gtag(){dataLayer.push(arguments);}
@@ -640,21 +639,27 @@
 		}
 	}
 
-
-	let ready = false;
-	let winnerType = 'first';
-
 	localStorage.removeItem('mbr_names');
 
-	document.addEventListener('DOMContentLoaded', () => {
-		initialize();
+	// DOM이 로드된 후 실행될 초기화 함수
+	function initializeAll() {
+		// DOM 요소들이 모두 로드된 후에 실행
 		const gameInfoInput = document.querySelector('#in_gameInfo');
 		const gameInfoDisplay = document.querySelector('#gameInfo');
 		
-		gameInfoInput.addEventListener('input', (e) => {
-			gameInfoDisplay.textContent = e.target.value;
-		});
-	});
+		if (gameInfoInput && gameInfoDisplay) {
+			gameInfoInput.addEventListener('input', (e) => {
+				gameInfoDisplay.textContent = e.target.value;
+			});
+		}
+
+		// URL 파라미터에서 데이터 복원
+		restoreFromUrl();
+		
+		// 나머지 초기화
+		initialize();
+	}
+
 	function initialize() {
 		if (!window.roullete || !window.roullete.isReady) {
 			console.log('does not loaded yet');
@@ -702,11 +707,6 @@
 			}
 		});
 
-
-		// document.querySelector('#btnPreStart').addEventListener('click', () => {
-		// 	preStartShuffle();
-		// });
-
 		document.querySelector('#in_maxSamples').addEventListener('change', (e) => {
 			const value = parseInt(e.target.value, 10);
 			MAX_SAMPLES = isNaN(value) || value < 1 ? 333 : value;
@@ -748,11 +748,6 @@
 		window.options.useSkills = false;
 		window.roullete.setWinningRank(window.options.winningRank);
 
-		// document.querySelector('#chkSkill').addEventListener('change', (e) => {
-		// 	window.options.useSkills = e.target.matches(':checked');
-		// 	window.roullete.setWinningRank(window.options.winningRank);
-		// });
-
 		document.querySelector('#in_winningRank').addEventListener('change', (e) => {
 			const v = parseInt(e.target.value, 10);
 			winnerType = 'custom';
@@ -768,15 +763,6 @@
 			winnerType = 'first';
 			setWinnerRank(1);
 		});
-
-		// document.querySelector('#btnShake').addEventListener('click', () => {
-		// 	window.roullete.shake();
-		// 	gtag('event', 'shake', {
-		// 		'event_category': 'roulette',
-		// 		'event_label': 'shake',
-		// 		'value': 1,
-		// 	});
-		// });
 
 		window.roullete.addEventListener('goal', () => {
 			ready = false;
@@ -825,10 +811,84 @@
 		//setTimeout(checkDonateButtonLoaded, 100);
 	}
 
-	document.querySelector('#in_gameInfo').addEventListener('input', (e) => {
-		document.querySelector('#gameInfo').textContent = e.target.value;
-	});
-	document.querySelector('#gameInfo').textContent = document.querySelector('#in_gameInfo').value;
+	// ====== 공유 기능 추가 ======
+	const SECRET_KEY = 20240521; // XOR용 시크릿 키(숫자)
+
+	function xorEncode(str, key) {
+		return btoa(Array.from(str).map((ch, i) => String.fromCharCode(ch.charCodeAt(0) ^ (key % 256))).join(''));
+	}
+	function xorDecode(str, key) {
+		try {
+			return atob(str).split('').map((ch, i) => String.fromCharCode(ch.charCodeAt(0) ^ (key % 256))).join('');
+		} catch (e) {
+			return '';
+		}
+	}
+
+	function makeShareUrl() {
+		const names = document.querySelector('#in_names').value;
+		const gameInfo = document.querySelector('#in_gameInfo').value;
+		const raw = JSON.stringify({ names, gameInfo });
+		const encoded = xorEncode(raw, SECRET_KEY);
+		return `${location.origin}${location.pathname}?data=${encodeURIComponent(encoded)}`;
+	}
+
+	function copyTest() {
+		const names = document.querySelector('#in_names').value;
+		const gameInfo = document.querySelector('#in_gameInfo').value;
+		
+		// 데이터를 구분자와 함께 난독화
+		const rawData = `${encodeURIComponent(names)}|||${encodeURIComponent(gameInfo)}`;
+		const data = btoa(unescape(encodeURIComponent(rawData)));  // 한글 처리
+		
+		// 현재 사이트 주소에 쿼리스트링 추가
+		const currentUrl = window.location.href.split('?')[0];  // 기존 쿼리스트링 제거
+		const shareUrl = `${currentUrl}?data=${data}`;
+		
+		const textarea = document.createElement('textarea');
+		textarea.value = shareUrl;
+		document.body.appendChild(textarea);
+		textarea.select();
+		document.execCommand('copy');
+		document.body.removeChild(textarea);
+		alert('공유 URL이 클립보드에 복사되었습니다!');
+	}
+
+	function restoreFromUrl() {
+		const params = new URLSearchParams(location.search);
+		if (params.has('data')) {
+			try {
+				// base64 디코딩 후 한글 처리
+				const decoded = decodeURIComponent(escape(atob(params.get('data'))));
+				console.log('복호화된 데이터:', decoded);
+
+				// 구분자로 분리
+				const [names, gameInfo] = decoded.split('|||');
+				console.log('분리된 데이터:', { names, gameInfo });
+
+				const namesInput = document.querySelector('#in_names');
+				const gameInfoInput = document.querySelector('#in_gameInfo');
+				const gameInfoDisplay = document.querySelector('#gameInfo');
+
+				if (names && namesInput) {
+					const decodedNames = decodeURIComponent(names);
+					namesInput.value = decodedNames;
+					console.log('복원된 이름:', decodedNames);
+				}
+				if (gameInfo && gameInfoInput && gameInfoDisplay) {
+					const decodedGameInfo = decodeURIComponent(gameInfo);
+					gameInfoInput.value = decodedGameInfo;
+					gameInfoDisplay.textContent = decodedGameInfo;
+					console.log('복원된 경기정보:', decodedGameInfo);
+				}
+			} catch (e) {
+				console.error('데이터 복원 실패:', e);
+			}
+		}
+	}
+
+	// DOM이 로드되면 초기화 실행
+	document.addEventListener('DOMContentLoaded', initializeAll);
 </script>
 <h1 id="pageTitle" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);">KT 수원야구장 스카이박스 추첨</h1>
 <div id="settings" class="settings">
@@ -885,19 +945,26 @@
 	<div class="left">
 		<h3 data-trans>Enter names below</h3>
 		<textarea id="in_names" placeholder="Input names separated by commas or line feed here" data-trans="placeholder">홍길동*3, 아무개*2, 김철수</textarea>
-		<div class="actions">
-			<button id="btnPreStart" style="display: none;">
-				<i class="icon preplay"></i>
-				<span data-trans>선수 입장</span>
-			</button>
-		<button id="btnShuffle">
-				<i class="icon shuffle"></i>
-				<span data-trans>&nbsp;&nbsp;순서 섞기</span>
-			</button>
-			<button id="btnStart">
-				<i class="icon play"></i>
-				<span data-trans>&nbsp;&nbsp;추첨 시작</span>
-			</button>
+		<div class="actions" style="display: flex; justify-content: space-between; align-items: center;">
+			<div style="margin-right: 20px;">
+				<button id="btnShare" onclick="copyTest()" style="cursor: pointer; color: #fefefe; background: #222; border: none; border-radius: 5px; padding: 5px 10px; position: relative; overflow: hidden; height: 35px; min-width: 60px;">
+					공유
+				</button>
+			</div>
+			<div style="display: flex; gap: 8px; margin-left: auto;">
+				<button id="btnPreStart" style="display: none;">
+					<i class="icon preplay"></i>
+					<span data-trans>선수 입장</span>
+				</button>
+				<button id="btnShuffle">
+					<i class="icon shuffle"></i>
+					<span data-trans>&nbsp;&nbsp;순서 섞기</span>
+				</button>
+				<button id="btnStart">
+					<i class="icon play"></i>
+					<span data-trans>&nbsp;&nbsp;추첨 시작</span>
+				</button>
+			</div>
 		</div>
 	</div>
 </div>
