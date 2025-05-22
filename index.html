@@ -22,9 +22,10 @@
 	<meta name="msapplication-TileImage" content="assets/ms-icon-144x144.png">
 	<meta name="theme-color" content="#ffffff">
 	<title>KT 수원야구장 스카이박스 추첨</title>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+	<link rel="preconnect" href="http://fonts.googleapis.com">
+	<link rel="preconnect" href="http://fonts.gstatic.com" crossorigin>
+	<link href="http://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 	<style lang="scss">
 		* {
 			box-sizing: border-box;
@@ -662,11 +663,9 @@
 
 	function initialize() {
 		if (!window.roullete || !window.roullete.isReady) {
-			console.log('does not loaded yet');
 			setTimeout(initialize, 100);
 			return;
 		}
-		console.log('initializing start');
 
 		const savedNames = localStorage.getItem('mbr_names');
 		if (savedNames) {
@@ -722,19 +721,12 @@
 
 		document.querySelector('#btnStart').addEventListener('click', () => {
 			if (!ready) return;
-			// gtag && gtag('event', 'start', {
-			// 	'event_category': 'roulette',
-			// 	'event_label': 'start',
-			// 	'value': window.roullete.getCount(),
-			// });
 			window.startBackgroundMusic(); 
 			startCountdown(() => {
-				// 카운트다운 완료 후 실행할 내용
 				window.roullete.start();
 				document.querySelector('#settings').classList.add('hide');
 			});
 			document.querySelector('#settings').classList.add('hide');
-			//document.querySelector('#donate').classList.add('hide');
 		});
 
 		window.options.autoRecording = true;
@@ -766,14 +758,8 @@
 
 		window.roullete.addEventListener('goal', () => {
 			ready = false;
-
-			    // 룰렛 결과에서 당첨자와 추가 후보 가져오기
-				const winners = preSelectedNames.slice(0, MAX_SAMPLES); // 당첨자
-				const extras = preSelectedNames.slice(MAX_SAMPLES, MAX_SAMPLES + 50); // 추가 50명
-				
 			setTimeout(() => {
 				document.querySelector('#settings').classList.remove('hide');
-				//document.querySelector('#donate').classList.remove('hide');
 			}, 3000);
 		});
 
@@ -797,18 +783,6 @@
 			const index = e.target.value;
 			window.roullete.setMap(index);
 		});
-
-		const checkDonateButtonLoaded = () => {
-			const btn = document.querySelector('span.bmc-btn-text');
-			if (!btn) {
-				setTimeout(checkDonateButtonLoaded, 100);
-			} else {
-				console.log('donation button has been loaded');
-				btn.setAttribute('data-trans', '');
-				window.translateElement(btn);
-			}
-		};
-		//setTimeout(checkDonateButtonLoaded, 100);
 	}
 
 	// ====== 공유 기능 추가 ======
@@ -833,17 +807,104 @@
 		return `${location.origin}${location.pathname}?data=${encodeURIComponent(encoded)}`;
 	}
 
+	// URL 압축을 위한 인코딩/디코딩 함수
+	function compressData(data) {
+		// 데이터를 압축하기 위한 간단한 매핑
+		const mapping = {
+			' ': '_',
+			'가': 'a', '나': 'b', '다': 'c', '라': 'd', '마': 'e',
+			'바': 'f', '사': 'g', '아': 'h', '자': 'i', '차': 'j',
+			'카': 'k', '타': 'l', '파': 'm', '하': 'n',
+			'0': '0', '1': '1', '2': '2', '3': '3', '4': '4',
+			'5': '5', '6': '6', '7': '7', '8': '8', '9': '9'
+		};
+		
+		// 역매핑 생성
+		const reverseMapping = Object.entries(mapping).reduce((acc, [key, value]) => {
+			acc[value] = key;
+			return acc;
+		}, {});
+
+		// 압축 함수
+		function encode(str) {
+			return str.split('').map(char => mapping[char] || char).join('');
+		}
+
+		// 압축 해제 함수
+		function decode(str) {
+			return str.split('').map(char => reverseMapping[char] || char).join('');
+		}
+
+		return {
+			encode,
+			decode
+		};
+	}
+
+	function restoreFromUrl() {
+		const params = new URLSearchParams(location.search);
+		
+		if (params.has('data')) {
+			try {
+				const encodedData = params.get('data');
+				const decompressed = LZString.decompressFromEncodedURIComponent(encodedData);
+				
+				if (!decompressed) {
+					return;
+				}
+				
+				const data = JSON.parse(decompressed);
+				const namesInput = document.querySelector('#in_names');
+				const gameInfoInput = document.querySelector('#in_gameInfo');
+				const gameInfoDisplay = document.querySelector('#gameInfo');
+				
+				// 경기정보는 바로 설정
+				if (data.g && gameInfoInput && gameInfoDisplay) {
+					gameInfoInput.value = data.g;
+					gameInfoDisplay.textContent = data.g;
+				}
+				
+				// 이름과 맵 설정은 물리 엔진이 준비된 후에
+				const checkPhysicsReady = setInterval(() => {
+					if (window.roullete && window.roullete.isReady) {
+						clearInterval(checkPhysicsReady);
+						
+						const mapSelector = document.querySelector('#sltMap');
+						if (mapSelector) {
+							mapSelector.value = '0'; // 기본 맵 선택
+							window.roullete.setMap('0');
+							
+							// 맵 설정 후 이름 입력
+							if (data.n && namesInput) {
+								namesInput.value = data.n;
+								getReady();
+							}
+						}
+					}
+				}, 100);
+				
+			} catch (e) {
+				console.error('데이터 복원 실패:', e);
+			}
+		}
+	}
+
 	function copyTest() {
 		const names = document.querySelector('#in_names').value;
 		const gameInfo = document.querySelector('#in_gameInfo').value;
 		
-		// 데이터를 구분자와 함께 난독화
-		const rawData = `${encodeURIComponent(names)}|||${encodeURIComponent(gameInfo)}`;
-		const data = btoa(unescape(encodeURIComponent(rawData)));  // 한글 처리
+		// 데이터를 JSON으로 변환
+		const data = {
+			n: names,
+			g: gameInfo
+		};
+		
+		// LZ-string으로 압축
+		const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(data));
 		
 		// 현재 사이트 주소에 쿼리스트링 추가
-		const currentUrl = window.location.href.split('?')[0];  // 기존 쿼리스트링 제거
-		const shareUrl = `${currentUrl}?data=${data}`;
+		const currentUrl = window.location.href.split('?')[0];
+		const shareUrl = `${currentUrl}?data=${compressed}`;
 		
 		const textarea = document.createElement('textarea');
 		textarea.value = shareUrl;
@@ -854,41 +915,12 @@
 		alert('공유 URL이 클립보드에 복사되었습니다!');
 	}
 
-	function restoreFromUrl() {
-		const params = new URLSearchParams(location.search);
-		if (params.has('data')) {
-			try {
-				// base64 디코딩 후 한글 처리
-				const decoded = decodeURIComponent(escape(atob(params.get('data'))));
-				console.log('복호화된 데이터:', decoded);
-
-				// 구분자로 분리
-				const [names, gameInfo] = decoded.split('|||');
-				console.log('분리된 데이터:', { names, gameInfo });
-
-				const namesInput = document.querySelector('#in_names');
-				const gameInfoInput = document.querySelector('#in_gameInfo');
-				const gameInfoDisplay = document.querySelector('#gameInfo');
-
-				if (names && namesInput) {
-					const decodedNames = decodeURIComponent(names);
-					namesInput.value = decodedNames;
-					console.log('복원된 이름:', decodedNames);
-				}
-				if (gameInfo && gameInfoInput && gameInfoDisplay) {
-					const decodedGameInfo = decodeURIComponent(gameInfo);
-					gameInfoInput.value = decodedGameInfo;
-					gameInfoDisplay.textContent = decodedGameInfo;
-					console.log('복원된 경기정보:', decodedGameInfo);
-				}
-			} catch (e) {
-				console.error('데이터 복원 실패:', e);
-			}
-		}
-	}
-
 	// DOM이 로드되면 초기화 실행
-	document.addEventListener('DOMContentLoaded', initializeAll);
+	document.addEventListener('DOMContentLoaded', () => {
+		initializeAll();
+		// URL에서 데이터 복원
+		restoreFromUrl();
+	});
 </script>
 <h1 id="pageTitle" style="text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);">KT 수원야구장 스카이박스 추첨</h1>
 <div id="settings" class="settings">

@@ -2,6 +2,13 @@
   "name": "skybox",
   "version": "1.0.0",
   "license": "MIT",
+  "homepage": "https://kbank-ux.github.io/skybox",
+  "scripts": {
+    "lint": "eslint --fix src/**/*.ts",
+    "dev": "parcel index.html",
+    "build": "parcel build index.html --public-url /skybox/",
+    "deploy": "yarn build && gh-pages -d dist"
+  },
   "devDependencies": {
     "@parcel/packager-raw-url": "^2.13.0",
     "@parcel/transformer-sass": "^2.13.0",
@@ -19,12 +26,6 @@
     "tsup": "^8.3.5",
     "typescript": "^5.6.3",
     "typescript-eslint": "^8.15.0"
-  },
-  "scripts": {
-    "lint": "eslint --fix src/**/*.ts",
-    "dev": "parcel index.html",
-    "build": "parcel build index.html --public-url /skybox/",
-    "deploy": "yarn build && gh-pages -d dist"
   },
   "dependencies": {
     "box2d-wasm": "^7.0.0"
